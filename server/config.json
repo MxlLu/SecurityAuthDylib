@@ -3,7 +3,7 @@
     "app_name": "iOS Security License System",
     "port": 4090,
     "bundle_id_whitelist": [],
-    "admin_api_key": "admin_secret_token_123456"
+    "admin_api_key": "admin"
   },
   "security": {
     "allowed_clock_skew_ms": 30000,

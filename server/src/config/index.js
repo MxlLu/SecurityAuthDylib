@@ -17,6 +17,19 @@ if (fs.existsSync(configJsonPath)) {
   }
 }
 
+export function getAdminApiKey() {
+  if (process.env.ADMIN_API_KEY) return process.env.ADMIN_API_KEY;
+  try {
+    if (fs.existsSync(configJsonPath)) {
+      const latest = JSON.parse(fs.readFileSync(configJsonPath, 'utf-8'));
+      if (latest.service?.admin_api_key) {
+        return latest.service.admin_api_key;
+      }
+    }
+  } catch (err) {}
+  return config.security?.adminApiKey || 'admin_secret_token_123456';
+}
+
 export const config = {
   port: parseInt(process.env.PORT || rawJsonConfig.service?.port || '4090', 10),
   host: process.env.HOST || '0.0.0.0',

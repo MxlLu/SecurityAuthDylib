@@ -1,10 +1,11 @@
 import { adminService } from '../services/admin-service.js';
-import { config } from '../config/index.js';
+import { config, getAdminApiKey } from '../config/index.js';
 
 export const adminController = {
   checkAdminAuth(req, res, next) {
     const token = req.headers['x-admin-key'] || req.query.key;
-    if (!token || token !== config.security.adminApiKey) {
+    const expectedKey = getAdminApiKey();
+    if (!token || token !== expectedKey) {
       return res.status(403).json({ code: 403, msg: '未授权访问管理端 API，请提供合法的 X-Admin-Key' });
     }
     next();

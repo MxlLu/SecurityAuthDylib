@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+server/node_modules/
+
+# Build artifacts & packages
+*.zip
+*.ipa
+client/build/
+output/
+temp_*/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# OS & Editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Logs & temp
+*.log
+*.tmp
+input.css
+test.txt

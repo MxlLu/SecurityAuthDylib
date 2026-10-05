@@ -1,0 +1,16 @@
+{
+  "name": "ios-auth-server",
+  "version": "1.0.0",
+  "description": "iOS Network License & Dylib Injection Auth Server",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test:client": "node tests/simulate_client.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2"
+  }
+}

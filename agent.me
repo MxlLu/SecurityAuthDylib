@@ -1,0 +1,103 @@
+# Agent 角色与项目工程规范 (agent.me)
+
+## 1. 项目基本信息与代号
+- **项目名称**：iOS Network License & Dylib Injection Framework (iOS 网络授权验证与 Dylib 注入系统)
+- **目标环境**：iOS 14.0+ (支持越狱 / 免越狱 IPA 侧载与重签名场景)
+- **核心定位**：高安全性、模块化、抗分析的动态库级别卡密网络验证系统与配套管理后端。
+
+---
+
+## 2. Agent 角色定位与准则
+### 2.1 角色定义
+- **角色**：资深 iOS 逆向工程、安全攻防专家与全栈服务端架构师。
+- **协作模式**：严格按照阶段性里程碑执行，**当前阶段仅制定架构文档与规范，不输出具体业务代码**。
+
+### 2.2 工作原则与红线
+1. **安全性第一**：
+   - 严禁在客户端以任何明文形式硬编码通信密钥、API 签名盐值或特征字符串。
+   - 所有通信必须采用动态非对称密钥协商或双向加解密防重放体系（如 ECDH/RSA + AES-256-GCM）。
+   - 验证逻辑必须依赖服务端下发动态 Token 及心跳保活机制，禁止单纯本地 BOOL 标志位判断。
+2. **模块解耦**：
+   - 注入引导、设备指纹、网络通信、加密模块、UI 渲染、反调试守护各层完全解耦，提供抽象接口。
+3. **环境适配性**：
+   - 兼容标准 Mach-O 动态库规范，同时适配越狱环境 (Theos/CydiaSubstrate) 与未越狱重签名注入 (optool/insert_dylib/zsign)。
+
+---
+
+## 3. 技术栈与工具链规划
+
+### 3.1 客户端 Dylib 技术栈
+- **语言**：Objective-C / C / C++ 混编
+- **编译构建**：Theos (Logos) / CMake / Xcode Command Line Tools
+- **符号与Hook框架**：Dobby / Fishhook / CydiaSubstrate (按环境可选)
+- **底层加密库**：mbedtls 或 CommonCrypto (封装为静态内联无符号代码)
+- **UI展示**：原生 UIKit (UIWindow / UIAlertController 纯代码绘制，支持暗黑模式)
+
+### 3.2 注入与打包工具链
+- **Mach-O 处理**：`optool` / `insert_dylib` (写入 `LC_LOAD_DYLIB`)
+- **二进制修正**：`install_name_tool` (修正 `@rpath` 与依赖路径)
+- **重签名工具**：`zsign` / `ldid` / `codesign`
+- **Mach-O 分析**：`otool`, `jtool2`, `class-dump`, `MachOView`, `IDA Pro`
+
+### 3.3 验证服务端技术栈 (规划)
+- **服务核心**：Go (Gin / Fiber) 或 Node.js (NestJS / Fastify)
+- **缓存与状态**：Redis (设备在线状态、心跳租约、Nonce 防重放池、频控限制)
+- **持久化存储**：MySQL 8.0+ / PostgreSQL (卡密数据、设备绑定、审计日志)
+- **部署模式**：Docker Compose / K8s 微服务容器化
+
+---
+
+## 4. 客户端与服务端系统划分规范
+
+```
+[Target App Process]
+   └── [Injected Dylib]
+         ├── (1) 引导构造层 (Constructor / __attribute__((constructor)))
+         ├── (2) 反调试与环境探测层 (Anti-Debug / Anti-Frida / Jailbreak Check)
+         ├── (3) 设备指纹提取层 (Device Fingerprinting / Keychain UUID)
+         ├── (4) 安全通信客户端 (Secure Network Client / HTTP / TLS Pinning)
+         ├── (5) 密码学引擎 (AES-GCM / RSA / Signature Engine)
+         ├── (6) 动态心跳守护器 (Heartbeat Watchdog / Memory Watcher)
+         └── (7) 原生授权交互 UI (Auth Dialog / Status HUD)
+                     │ (HTTPS / WSS + E2EE)
+                     ▼
+[Auth Server Gateway]
+   ├── 握手密钥协商与时间同步
+   ├── 设备绑定与换绑鉴权
+   ├── 卡密状态机流转 (未激活 / 正常 / 冻结 / 过期)
+   └── 心跳租约刷新与异常踢出
+```
+
+---
+
+## 5. 核心安全机制设计原则
+
+1. **设备指纹算法 (Device Fingerprint)**：
+   - 多因子混合指纹：IDFV + Keychain 强持久化 UUID + 硬件特征 (CPU/屏幕分辨率/设备型号/系统版本) + 随机硬件盐。
+   - 避免直接采集被苹果禁止的隐私 API，未越狱模式需在沙盒允许范围内最大化唯一性与防刷能力。
+2. **防重放与防篡改 (Anti-Replay & Integrity)**：
+   - 请求格式：`{ timestamp, nonce, payload_encrypted, signature }`。
+   - 服务端校验时间偏差范围（例如 $\le 30$ 秒），并在 Redis 中使用原子性记录 Nonce 保证一次一密。
+3. **心跳保活与内存熔断 (Heartbeat & Circuit Breaker)**：
+   - 周期性心跳返回服务端动态随机挑战码 (Challenge Token)，若心跳失败或断网，执行内存销毁或优雅阻断业务逻辑。
+4. **反分析与对抗 (Hardening Roadmap)**：
+   - 字符串与敏感常量全部使用编译期动态异或加密。
+   - 动态系统调用或关键函数符号隐藏。
+   - 基础 ptrace / sysctl 反附加以及异常处理端口监测。
+
+---
+
+## 6. 后续演进阶段计划 (Execution Roadmap)
+
+- **Phase 1: 文档与协议规范定义（当前）**
+  - 完成 `agent.me` 和 `readme.md` 整体架构图、模块规划、通信协议规范。
+- **Phase 2: 通信协议与数据字典详述**
+  - 编写详细的 API 协议规格书（OpenAPI / Markdown 契约），定义各接口请求与响应报文。
+- **Phase 3: 验证服务端原型工程搭建**
+  - 初始化服务端项目结构，实现卡密生成、激活、心跳及数据持久化。
+- **Phase 4: Dylib 客户端骨架与注入测试**
+  - 编写 Dylib 基础项目结构，打通注入流程与原生 UI 呈现。
+- **Phase 5: 端到端加解密与通信联调**
+  - 完成客户端与服务端的真实网络联调，实现卡密校验与心跳保活闭环。
+- **Phase 6: 安全加固与防破解增强**
+  - 接入反调试、代码混淆方案、字符串加密与自校验。

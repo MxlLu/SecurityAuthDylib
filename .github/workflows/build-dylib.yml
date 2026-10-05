@@ -1,0 +1,32 @@
+name: Build iOS SecurityAuth Dylib
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'client/SecurityAuthDylib/**'
+
+jobs:
+  build:
+    runs-on: macos-14
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_15.4.app/Contents/Developer
+
+      - name: Compile SecurityAuth.dylib
+        run: |
+          cd client/SecurityAuthDylib
+          make
+          ls -lh ../build/SecurityAuth.dylib
+          file ../build/SecurityAuth.dylib
+
+      - name: Upload SecurityAuth.dylib Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SecurityAuth.dylib
+          path: client/build/SecurityAuth.dylib
+          if-no-files-found: error

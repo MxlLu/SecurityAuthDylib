@@ -1,0 +1,308 @@
+{
+  "cards": [
+    {
+      "id": 1791122350442,
+      "card_key": "VIP-MONT-2DCA-7349-D255",
+      "card_type": "MONTHLY",
+      "status": "ACTIVE",
+      "max_devices": 1,
+      "unbind_count": 1,
+      "max_unbind_limit": 3,
+      "activated_at": 1791122350,
+      "expire_at": 1793707150,
+      "note": "自动化测试卡密",
+      "created_at": "2026-10-04T13:59:10.208Z",
+      "updated_at": "2026-10-04T13:59:10.236Z"
+    },
+    {
+      "id": 1791125449187,
+      "card_key": "VIP-CUSTOM-8888",
+      "card_type": "MONTHLY",
+      "custom_duration_seconds": 0,
+      "status": "UNACTIVATED",
+      "max_devices": 2,
+      "unbind_count": 0,
+      "max_unbind_limit": 3,
+      "activated_at": 0,
+      "expire_at": 0,
+      "note": "自定义月卡测试",
+      "created_at": "2026-10-04T14:50:49.161Z",
+      "updated_at": "2026-10-04T14:50:49.175Z"
+    },
+    {
+      "id": 1791125580510,
+      "card_key": "VIP-CUSTOM-580019",
+      "card_type": "MONTHLY",
+      "custom_duration_seconds": 0,
+      "status": "ACTIVE",
+      "max_devices": 2,
+      "unbind_count": 1,
+      "max_unbind_limit": 5,
+      "activated_at": 1791125580,
+      "expire_at": 1793710380,
+      "note": "指定自定义卡密测试",
+      "created_at": "2026-10-04T14:53:00.023Z",
+      "updated_at": "2026-10-04T14:53:00.052Z"
+    },
+    {
+      "id": 1791127474373,
+      "card_key": "VIP-TARGET-2026",
+      "card_type": "MONTHLY",
+      "custom_duration_seconds": 0,
+      "status": "ACTIVE",
+      "max_devices": 2,
+      "unbind_count": 2,
+      "max_unbind_limit": 3,
+      "activated_at": 1791127491,
+      "expire_at": 1793705091,
+      "note": "IPA实际注入联调专用卡密",
+      "created_at": "2026-10-04T15:24:33.649Z",
+      "updated_at": "2026-10-05T07:51:43.809Z"
+    }
+  ],
+  "bindings": [
+    {
+      "id": 1791122351096,
+      "card_key": "VIP-MONT-2DCA-7349-D255",
+      "device_fp_hash": "f886efe95a681bd00c61f2fc272c9429d4c4dac167ff330baf9e1fa5105ae519",
+      "keychain_uuid": "E1F2A3B4-C5D6-4E7F-8A9B-0C1D2E3F4A5B",
+      "device_model": "iPhone15,2",
+      "system_version": "17.4",
+      "first_bound_at": 1791122350,
+      "last_seen_at": 1791122350,
+      "last_ip": "127.0.0.1",
+      "is_active": 0,
+      "unbound_at": 1791122350
+    },
+    {
+      "id": 1791125580615,
+      "card_key": "VIP-CUSTOM-580019",
+      "device_fp_hash": "f886efe95a681bd00c61f2fc272c9429d4c4dac167ff330baf9e1fa5105ae519",
+      "keychain_uuid": "E1F2A3B4-C5D6-4E7F-8A9B-0C1D2E3F4A5B",
+      "device_model": "iPhone15,2",
+      "system_version": "17.4",
+      "first_bound_at": 1791125580,
+      "last_seen_at": 1791125580,
+      "last_ip": "127.0.0.1",
+      "is_active": 0,
+      "unbound_at": 1791125580
+    },
+    {
+      "id": 1791127492489,
+      "card_key": "VIP-TARGET-2026",
+      "device_fp_hash": "f886efe95a681bd00c61f2fc272c9429d4c4dac167ff330baf9e1fa5105ae519",
+      "keychain_uuid": "E1F2A3B4-C5D6-4E7F-8A9B-0C1D2E3F4A5B",
+      "device_model": "iPhone15,2",
+      "system_version": "17.4",
+      "first_bound_at": 1791127491,
+      "last_seen_at": 1791127491,
+      "last_ip": "127.0.0.1",
+      "is_active": 0,
+      "unbound_at": 1791127491
+    },
+    {
+      "id": 1791186704664,
+      "card_key": "VIP-TARGET-2026",
+      "device_fp_hash": "f886efe95a681bd00c61f2fc272c9429d4c4dac167ff330baf9e1fa5105ae519",
+      "keychain_uuid": "E1F2A3B4-C5D6-4E7F-8A9B-0C1D2E3F4A5B",
+      "device_model": "iPhone15,2",
+      "system_version": "17.4",
+      "first_bound_at": 1791186703,
+      "last_seen_at": 1791186703,
+      "last_ip": "127.0.0.1",
+      "is_active": 0,
+      "unbound_at": 1791186703
+    }
+  ],
+  "audit_logs": [
+    {
+      "id": 1791122350727,
+      "action_type": "HANDSHAKE",
+      "card_key": "",
+      "client_ip": "",
+      "device_info": "{\"app_bundle_id\":\"com.target.testapp\",\"client_sdk_version\":\"1.0.0\"}",
+      "payload_summary": "客户端握手分配 ID: cli_b6a501d021d79ca2",
+      "created_at": "2026-10-04T13:59:10.192Z"
+    },
+    {
+      "id": 1791122350217,
+      "action_type": "ADMIN_GEN_CARDS",
+      "card_key": "",
+      "client_ip": "",
+      "device_info": "null",
+      "payload_summary": "批量生成卡密 1 张，类型: MONTHLY",
+      "created_at": "2026-10-04T13:59:10.209Z"
+    },
+    {
+      "id": 1791122350698,
+      "action_type": "ACTIVATE",
+      "card_key": "VIP-MONT-2DCA-7349-D255",
+      "client_ip": "127.0.0.1",
+      "device_info": "{\"keychain_uuid\":\"E1F2A3B4-C5D6-4E7F-8A9B-0C1D2E3F4A5B\",\"idfv\":\"A1B2C3D4-E5F6-7A8B-9C0D-1E2F3A4B5C6D\",\"device_model\":\"iPhone15,2\",\"system_version\":\"17.4\",\"hardware_hash\":\"9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08\"}",
+      "payload_summary": "激活成功，设备哈希: f886efe95a...",
+      "created_at": "2026-10-04T13:59:10.216Z"
+    },
+    {
+      "id": 1791122351013,
+      "action_type": "VERIFY",
+      "card_key": "VIP-MONT-2DCA-7349-D255",
+      "client_ip": "127.0.0.1",
+      "device_info": "{\"keychain_uuid\":\"E1F2A3B4-C5D6-4E7F-8A9B-0C1D2E3F4A5B\",\"idfv\":\"A1B2C3D4-E5F6-7A8B-9C0D-1E2F3A4B5C6D\",\"device_model\":\"iPhone15,2\",\"system_version\":\"17.4\",\"hardware_hash\":\"9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08\"}",
+      "payload_summary": "免密静默登录成功",
+      "created_at": "2026-10-04T13:59:10.223Z"
+    },
+    {
+      "id": 1791122350252,
+      "action_type": "UNBIND",
+      "card_key": "VIP-MONT-2DCA-7349-D255",
+      "client_ip": "127.0.0.1",
+      "device_info": "{\"keychain_uuid\":\"E1F2A3B4-C5D6-4E7F-8A9B-0C1D2E3F4A5B\",\"idfv\":\"A1B2C3D4-E5F6-7A8B-9C0D-1E2F3A4B5C6D\",\"device_model\":\"iPhone15,2\",\"system_version\":\"17.4\",\"hardware_hash\":\"9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08\"}",
+      "payload_summary": "设备解绑成功，原因: TEST_DEVICE_REPLACEMENT",
+      "created_at": "2026-10-04T13:59:10.237Z"
+    },
+    {
+      "id": 1791125449182,
+      "action_type": "ADMIN_CREATE_CUSTOM_CARD",
+      "card_key": "VIP-CUSTOM-8888",
+      "client_ip": "",
+      "device_info": "null",
+      "payload_summary": "创建自定义卡密: VIP-CUSTOM-8888",
+      "created_at": "2026-10-04T14:50:49.178Z"
+    },
+    {
+      "id": 1791125458621,
+      "action_type": "ADMIN_UPDATE_CONFIG",
+      "card_key": "",
+      "client_ip": "",
+      "device_info": "null",
+      "payload_summary": "管理员更新业务系统配置",
+      "created_at": "2026-10-04T14:50:58.262Z"
+    },
+    {
+      "id": 1791125580052,
+      "action_type": "HANDSHAKE",
+      "card_key": "",
+      "client_ip": "",
+      "device_info": "{\"app_bundle_id\":\"com.target.testapp\",\"client_sdk_version\":\"1.0.0\"}",
+      "payload_summary": "客户端握手分配 ID: cli_ca775b3e1010a803",
+      "created_at": "2026-10-04T14:53:00.001Z"
+    },
+    {
+      "id": 1791125580314,
+      "action_type": "ADMIN_CREATE_CUSTOM_CARD",
+      "card_key": "VIP-CUSTOM-580019",
+      "client_ip": "",
+      "device_info": "null",
+      "payload_summary": "创建自定义卡密: VIP-CUSTOM-580019",
+      "created_at": "2026-10-04T14:53:00.023Z"
+    },
+    {
+      "id": 1791125580875,
+      "action_type": "ACTIVATE",
+      "card_key": "VIP-CUSTOM-580019",
+      "client_ip": "127.0.0.1",
+      "device_info": "{\"keychain_uuid\":\"E1F2A3B4-C5D6-4E7F-8A9B-0C1D2E3F4A5B\",\"idfv\":\"A1B2C3D4-E5F6-7A8B-9C0D-1E2F3A4B5C6D\",\"device_model\":\"iPhone15,2\",\"system_version\":\"17.4\",\"hardware_hash\":\"9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08\"}",
+      "payload_summary": "激活成功，设备哈希: f886efe95a...",
+      "created_at": "2026-10-04T14:53:00.032Z"
+    },
+    {
+      "id": 1791125580301,
+      "action_type": "VERIFY",
+      "card_key": "VIP-CUSTOM-580019",
+      "client_ip": "127.0.0.1",
+      "device_info": "{\"keychain_uuid\":\"E1F2A3B4-C5D6-4E7F-8A9B-0C1D2E3F4A5B\",\"idfv\":\"A1B2C3D4-E5F6-7A8B-9C0D-1E2F3A4B5C6D\",\"device_model\":\"iPhone15,2\",\"system_version\":\"17.4\",\"hardware_hash\":\"9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08\"}",
+      "payload_summary": "免密静默登录成功",
+      "created_at": "2026-10-04T14:53:00.038Z"
+    },
+    {
+      "id": 1791125581025,
+      "action_type": "UNBIND",
+      "card_key": "VIP-CUSTOM-580019",
+      "client_ip": "127.0.0.1",
+      "device_info": "{\"keychain_uuid\":\"E1F2A3B4-C5D6-4E7F-8A9B-0C1D2E3F4A5B\",\"idfv\":\"A1B2C3D4-E5F6-7A8B-9C0D-1E2F3A4B5C6D\",\"device_model\":\"iPhone15,2\",\"system_version\":\"17.4\",\"hardware_hash\":\"9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08\"}",
+      "payload_summary": "设备解绑成功，原因: TEST_DEVICE_REPLACEMENT",
+      "created_at": "2026-10-04T14:53:00.052Z"
+    },
+    {
+      "id": 1791127474402,
+      "action_type": "ADMIN_CREATE_CUSTOM_CARD",
+      "card_key": "VIP-TARGET-2026",
+      "client_ip": "",
+      "device_info": "null",
+      "payload_summary": "创建自定义卡密: VIP-TARGET-2026",
+      "created_at": "2026-10-04T15:24:33.651Z"
+    },
+    {
+      "id": 1791127492071,
+      "action_type": "HANDSHAKE",
+      "card_key": "",
+      "client_ip": "",
+      "device_info": "{\"app_bundle_id\":\"com.target.testapp\",\"client_sdk_version\":\"1.0.0\"}",
+      "payload_summary": "客户端握手分配 ID: cli_c66887313c664222",
+      "created_at": "2026-10-04T15:24:51.727Z"
+    },
+    {
+      "id": 1791127492679,
+      "action_type": "ACTIVATE",
+      "card_key": "VIP-TARGET-2026",
+      "client_ip": "127.0.0.1",
+      "device_info": "{\"keychain_uuid\":\"E1F2A3B4-C5D6-4E7F-8A9B-0C1D2E3F4A5B\",\"idfv\":\"A1B2C3D4-E5F6-7A8B-9C0D-1E2F3A4B5C6D\",\"device_model\":\"iPhone15,2\",\"system_version\":\"17.4\",\"hardware_hash\":\"9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08\"}",
+      "payload_summary": "激活成功，设备哈希: f886efe95a...",
+      "created_at": "2026-10-04T15:24:51.746Z"
+    },
+    {
+      "id": 1791127492050,
+      "action_type": "VERIFY",
+      "card_key": "VIP-TARGET-2026",
+      "client_ip": "127.0.0.1",
+      "device_info": "{\"keychain_uuid\":\"E1F2A3B4-C5D6-4E7F-8A9B-0C1D2E3F4A5B\",\"idfv\":\"A1B2C3D4-E5F6-7A8B-9C0D-1E2F3A4B5C6D\",\"device_model\":\"iPhone15,2\",\"system_version\":\"17.4\",\"hardware_hash\":\"9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08\"}",
+      "payload_summary": "免密静默登录成功",
+      "created_at": "2026-10-04T15:24:51.753Z"
+    },
+    {
+      "id": 1791127492112,
+      "action_type": "UNBIND",
+      "card_key": "VIP-TARGET-2026",
+      "client_ip": "127.0.0.1",
+      "device_info": "{\"keychain_uuid\":\"E1F2A3B4-C5D6-4E7F-8A9B-0C1D2E3F4A5B\",\"idfv\":\"A1B2C3D4-E5F6-7A8B-9C0D-1E2F3A4B5C6D\",\"device_model\":\"iPhone15,2\",\"system_version\":\"17.4\",\"hardware_hash\":\"9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08\"}",
+      "payload_summary": "设备解绑成功，原因: TEST_DEVICE_REPLACEMENT",
+      "created_at": "2026-10-04T15:24:51.766Z"
+    },
+    {
+      "id": 1791186704185,
+      "action_type": "HANDSHAKE",
+      "card_key": "",
+      "client_ip": "",
+      "device_info": "{\"app_bundle_id\":\"com.target.testapp\",\"client_sdk_version\":\"1.0.0\"}",
+      "payload_summary": "客户端握手分配 ID: cli_6bf7b39a002f3a32",
+      "created_at": "2026-10-05T07:51:43.767Z"
+    },
+    {
+      "id": 1791186704668,
+      "action_type": "ACTIVATE",
+      "card_key": "VIP-TARGET-2026",
+      "client_ip": "127.0.0.1",
+      "device_info": "{\"keychain_uuid\":\"E1F2A3B4-C5D6-4E7F-8A9B-0C1D2E3F4A5B\",\"idfv\":\"A1B2C3D4-E5F6-7A8B-9C0D-1E2F3A4B5C6D\",\"device_model\":\"iPhone15,2\",\"system_version\":\"17.4\",\"hardware_hash\":\"9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08\"}",
+      "payload_summary": "激活成功，设备哈希: f886efe95a...",
+      "created_at": "2026-10-05T07:51:43.789Z"
+    },
+    {
+      "id": 1791186704415,
+      "action_type": "VERIFY",
+      "card_key": "VIP-TARGET-2026",
+      "client_ip": "127.0.0.1",
+      "device_info": "{\"keychain_uuid\":\"E1F2A3B4-C5D6-4E7F-8A9B-0C1D2E3F4A5B\",\"idfv\":\"A1B2C3D4-E5F6-7A8B-9C0D-1E2F3A4B5C6D\",\"device_model\":\"iPhone15,2\",\"system_version\":\"17.4\",\"hardware_hash\":\"9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08\"}",
+      "payload_summary": "免密静默登录成功",
+      "created_at": "2026-10-05T07:51:43.795Z"
+    },
+    {
+      "id": 1791186704222,
+      "action_type": "UNBIND",
+      "card_key": "VIP-TARGET-2026",
+      "client_ip": "127.0.0.1",
+      "device_info": "{\"keychain_uuid\":\"E1F2A3B4-C5D6-4E7F-8A9B-0C1D2E3F4A5B\",\"idfv\":\"A1B2C3D4-E5F6-7A8B-9C0D-1E2F3A4B5C6D\",\"device_model\":\"iPhone15,2\",\"system_version\":\"17.4\",\"hardware_hash\":\"9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08\"}",
+      "payload_summary": "设备解绑成功，原因: TEST_DEVICE_REPLACEMENT",
+      "created_at": "2026-10-05T07:51:43.810Z"
+    }
+  ]
+}

@@ -1,0 +1,1098 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>iOS 网络验证管理控制台</title>
+  <!-- 本地静态化加载 (免外网 CDN 依赖，杜绝超时与被墙，秒级加载) -->
+  <script src="vendor/tailwindcss.js"></script>
+  <script src="vendor/vue.global.prod.js"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0fdf4',
+              500: '#22c55e',
+              600: '#16a34a',
+              700: '#15803d'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    [v-cloak] { display: none; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
+  </style>
+</head>
+<body class="bg-gray-950 text-gray-100 min-h-screen antialiased">
+  <div id="app" v-cloak class="min-h-screen flex flex-col">
+    <!-- 1. 登录校验模态框 -->
+    <div v-if="!isAuthenticated" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+      <div class="bg-gray-900 border border-gray-800 rounded-2xl w-full max-w-md p-8 shadow-2xl">
+        <div class="flex items-center justify-center mb-6">
+          <div class="w-14 h-14 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center justify-center text-emerald-400 text-2xl font-bold">
+            🛡️
+          </div>
+        </div>
+        <h2 class="text-2xl font-bold text-center text-white mb-2">安全鉴权中心</h2>
+        <p class="text-sm text-gray-400 text-center mb-6">请输入管理员 API Key 以登录控制台</p>
+
+        <form @submit.prevent="login">
+          <div class="mb-4">
+            <label class="block text-xs font-semibold uppercase text-gray-400 mb-2">管理员秘钥 (Admin API Key)</label>
+            <input
+              type="password"
+              v-model="loginKey"
+              placeholder="请输入 ADMIN_API_KEY"
+              class="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-emerald-500 transition"
+              required
+            />
+          </div>
+          <div v-if="loginError" class="text-red-400 text-xs mb-4 text-center">
+            {{ loginError }}
+          </div>
+          <button
+            type="submit"
+            class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-3 rounded-xl transition shadow-lg shadow-emerald-900/30">
+            进入管理控制台
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- 2. 主页面结构 -->
+    <div v-else class="flex flex-col flex-1">
+      <!-- 顶部导航 -->
+      <header class="bg-gray-900/80 backdrop-blur border-b border-gray-800 sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+          <div class="flex items-center space-x-3">
+            <div class="w-9 h-9 bg-emerald-500/10 border border-emerald-500/30 rounded-xl flex items-center justify-center text-emerald-400 font-bold">
+              ⚡
+            </div>
+            <div>
+              <div class="font-bold text-white text-base tracking-wide flex items-center gap-2">
+                iOS Auth Control Center
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-950 text-emerald-400 border border-emerald-800">
+                  v1.0
+                </span>
+              </div>
+              <div class="text-xs text-gray-400">注入式动态库网络授权服务端</div>
+            </div>
+          </div>
+
+          <!-- 导航 Tab -->
+          <nav class="hidden md:flex space-x-1">
+            <button
+              v-for="tab in tabs"
+              :key="tab.id"
+              @click="currentTab = tab.id"
+              :class="[
+                'px-4 py-2 text-sm font-medium rounded-lg transition flex items-center gap-2',
+                currentTab === tab.id
+                  ? 'bg-emerald-600/10 text-emerald-400 border border-emerald-500/30'
+                  : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
+              ]"
+            >
+              <span>{{ tab.icon }}</span>
+              <span>{{ tab.name }}</span>
+            </button>
+          </nav>
+
+          <!-- 右侧用户信息与操作 -->
+          <div class="flex items-center space-x-4">
+            <button
+              @click="refreshCurrent"
+              class="p-2 text-gray-400 hover:text-white bg-gray-800/60 hover:bg-gray-800 border border-gray-700/60 rounded-lg transition"
+              title="刷新数据"
+            >
+              🔄
+            </button>
+            <button
+              @click="logout"
+              class="text-xs text-red-400 hover:text-red-300 bg-red-950/40 hover:bg-red-900/40 border border-red-900/50 px-3 py-1.5 rounded-lg transition"
+            >
+              退出
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <!-- 移动端标签页 -->
+      <div class="md:hidden flex overflow-x-auto border-b border-gray-800 bg-gray-900 px-4 py-2 space-x-2">
+        <button
+          v-for="tab in tabs"
+          :key="tab.id"
+          @click="currentTab = tab.id"
+          :class="[
+            'px-3 py-1.5 text-xs whitespace-nowrap rounded-lg',
+            currentTab === tab.id ? 'bg-emerald-600 text-white' : 'text-gray-400 bg-gray-800'
+          ]"
+        >
+          {{ tab.icon }} {{ tab.name }}
+        </button>
+      </div>
+
+      <!-- 主工作区 -->
+      <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full">
+        <!-- Tab 1: 数据概览 (Overview) -->
+        <section v-if="currentTab === 'overview'" class="space-y-6">
+          <!-- 统计指标网格 -->
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="bg-gray-900 border border-gray-800 rounded-2xl p-5">
+              <div class="text-xs text-gray-400 font-medium">总卡密总数</div>
+              <div class="text-3xl font-extrabold text-white mt-2">{{ stats.total_cards || 0 }}</div>
+              <div class="text-xs text-gray-500 mt-1">包含所有生命周期卡密</div>
+            </div>
+
+            <div class="bg-gray-900 border border-gray-800 rounded-2xl p-5">
+              <div class="text-xs text-emerald-400 font-medium">正常使用中</div>
+              <div class="text-3xl font-extrabold text-emerald-400 mt-2">{{ stats.active_cards || 0 }}</div>
+              <div class="text-xs text-emerald-600 mt-1">活跃授权用户</div>
+            </div>
+
+            <div class="bg-gray-900 border border-gray-800 rounded-2xl p-5">
+              <div class="text-xs text-cyan-400 font-medium">在线活跃设备 (180s)</div>
+              <div class="text-3xl font-extrabold text-cyan-400 mt-2">{{ stats.online_devices || 0 }}</div>
+              <div class="text-xs text-cyan-600 mt-1">当前心跳正常客户端</div>
+            </div>
+
+            <div class="bg-gray-900 border border-gray-800 rounded-2xl p-5">
+              <div class="text-xs text-yellow-400 font-medium">待激活卡密</div>
+              <div class="text-3xl font-extrabold text-yellow-400 mt-2">{{ stats.unactivated_cards || 0 }}</div>
+              <div class="text-xs text-yellow-600 mt-1">库存可售 / 未上机</div>
+            </div>
+          </div>
+
+          <!-- 第二行快捷操作 -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- 快捷生成 -->
+            <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6 flex flex-col justify-between">
+              <div>
+                <h3 class="text-lg font-bold text-white mb-2">快速生成卡密</h3>
+                <p class="text-sm text-gray-400 mb-4">随时生成单张自定义指定卡密，或批量生成天卡/月卡/年卡。</p>
+              </div>
+              <button
+                @click="openGenModal()"
+                class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-2.5 rounded-xl transition text-sm flex items-center justify-center gap-2"
+              >
+                <span>➕</span> 生成 / 创建卡密
+              </button>
+            </div>
+
+            <!-- 系统公告卡片 -->
+            <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6 md:col-span-2">
+              <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-bold text-white">当前客户端公告</h3>
+                <button @click="currentTab = 'settings'" class="text-xs text-emerald-400 hover:underline">编辑公告</button>
+              </div>
+              <div class="bg-gray-950 border border-gray-800 rounded-xl p-4">
+                <div class="font-semibold text-white text-sm mb-1">{{ configData.business?.announcement?.title || '系统公告' }}</div>
+                <div class="text-sm text-gray-400">{{ configData.business?.announcement?.content || '暂无公告' }}</div>
+                <div class="text-xs text-gray-500 mt-2">
+                  强制弹窗提醒: {{ configData.business?.announcement?.force_alert ? '开启' : '关闭' }}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 最近卡密速览 -->
+          <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-lg font-bold text-white">最新卡密速览</h3>
+              <button @click="currentTab = 'cards'" class="text-xs text-emerald-400 hover:underline">查看全部卡密 &rarr;</button>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-sm">
+                <thead class="text-xs uppercase bg-gray-950 text-gray-400">
+                  <tr>
+                    <th class="px-4 py-3 rounded-l-lg">卡密</th>
+                    <th class="px-4 py-3">类型</th>
+                    <th class="px-4 py-3">状态</th>
+                    <th class="px-4 py-3">绑定设备</th>
+                    <th class="px-4 py-3 rounded-r-lg">到期时间</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-800">
+                  <tr v-for="c in cards.slice(0, 5)" :key="c.id" class="hover:bg-gray-800/40">
+                    <td class="px-4 py-3 font-mono font-bold text-emerald-400">{{ c.card_key }}</td>
+                    <td class="px-4 py-3">{{ c.card_type }}</td>
+                    <td class="px-4 py-3">
+                      <span :class="getStatusBadgeClass(c.status)" class="px-2 py-0.5 rounded text-xs">
+                        {{ getStatusText(c.status) }}
+                      </span>
+                    </td>
+                    <td class="px-4 py-3">{{ c.active_bindings ? c.active_bindings.length : 0 }} / {{ c.max_devices }}</td>
+                    <td class="px-4 py-3 text-gray-400">{{ formatExpire(c) }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- Tab 2: 卡密管理 (Cards Management) -->
+        <section v-if="currentTab === 'cards'" class="space-y-6">
+          <!-- 顶部工具栏 -->
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gray-900 border border-gray-800 p-4 rounded-2xl">
+            <div class="flex flex-1 items-center gap-3">
+              <input
+                type="text"
+                v-model="searchQuery"
+                placeholder="搜索卡密或备注..."
+                class="bg-gray-950 border border-gray-800 rounded-xl px-4 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-emerald-500 w-full max-w-xs"
+              />
+              <select
+                v-model="filterStatus"
+                class="bg-gray-950 border border-gray-800 rounded-xl px-3 py-2 text-sm text-gray-300 focus:outline-none focus:border-emerald-500"
+              >
+                <option value="ALL">全部状态</option>
+                <option value="ACTIVE">正常活跃</option>
+                <option value="UNACTIVATED">未激活</option>
+                <option value="EXPIRED">已过期</option>
+                <option value="FROZEN">已冻结</option>
+              </select>
+            </div>
+
+            <div class="flex items-center gap-3">
+              <button
+                @click="openGenModal()"
+                class="bg-emerald-600 hover:bg-emerald-500 text-white font-medium px-4 py-2 rounded-xl text-sm transition flex items-center gap-1 shadow-lg shadow-emerald-900/30"
+              >
+                <span>➕</span> 生成 / 创建卡密
+              </button>
+            </div>
+          </div>
+
+          <!-- 卡密数据表格 -->
+          <div class="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden shadow-xl">
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-sm">
+                <thead class="text-xs uppercase bg-gray-950 text-gray-400 border-b border-gray-800">
+                  <tr>
+                    <th class="px-5 py-3.5">卡密 Key</th>
+                    <th class="px-4 py-3.5">套餐</th>
+                    <th class="px-4 py-3.5">状态</th>
+                    <th class="px-4 py-3.5">设备占用</th>
+                    <th class="px-4 py-3.5">换绑</th>
+                    <th class="px-4 py-3.5">到期时间</th>
+                    <th class="px-4 py-3.5">备注</th>
+                    <th class="px-5 py-3.5 text-right">操作</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-800/60">
+                  <tr v-for="c in filteredCards" :key="c.id" class="hover:bg-gray-800/30 transition">
+                    <td class="px-5 py-3.5 font-mono font-bold text-white flex items-center gap-2">
+                      <span>{{ c.card_key }}</span>
+                      <button @click="copyText(c.card_key)" class="text-xs text-gray-500 hover:text-emerald-400" title="复制">📋</button>
+                    </td>
+                    <td class="px-4 py-3.5 text-gray-300">{{ c.card_type }}</td>
+                    <td class="px-4 py-3.5">
+                      <span :class="getStatusBadgeClass(c.status)" class="px-2.5 py-0.5 rounded-full text-xs font-medium">
+                        {{ getStatusText(c.status) }}
+                      </span>
+                    </td>
+                    <td class="px-4 py-3.5">
+                      <div class="flex items-center gap-2">
+                        <span class="text-xs">{{ c.active_bindings ? c.active_bindings.length : 0 }}/{{ c.max_devices }}</span>
+                        <div class="w-16 bg-gray-800 h-1.5 rounded-full overflow-hidden">
+                          <div
+                            class="bg-emerald-500 h-full"
+                            :style="{ width: ((c.active_bindings ? c.active_bindings.length : 0) / c.max_devices * 100) + '%' }"
+                          ></div>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="px-4 py-3.5 text-xs text-gray-400">
+                      {{ c.unbind_count }}/{{ c.max_unbind_limit }}
+                    </td>
+                    <td class="px-4 py-3.5 text-xs text-gray-400">
+                      {{ formatExpire(c) }}
+                    </td>
+                    <td class="px-4 py-3.5 text-xs text-gray-500 max-w-[120px] truncate" :title="c.note">
+                      {{ c.note || '-' }}
+                    </td>
+                    <td class="px-5 py-3.5 text-right space-x-2">
+                      <!-- 查看绑定设备 -->
+                      <button
+                        @click="viewBindings(c)"
+                        class="text-xs text-cyan-400 hover:text-cyan-300 bg-cyan-950/40 border border-cyan-900/50 px-2 py-1 rounded-lg"
+                        title="查看设备"
+                      >
+                        设备
+                      </button>
+                      <!-- 重置绑定 -->
+                      <button
+                        @click="resetCard(c)"
+                        class="text-xs text-yellow-400 hover:text-yellow-300 bg-yellow-950/40 border border-yellow-900/50 px-2 py-1 rounded-lg"
+                        title="强制解绑所有设备"
+                      >
+                        解绑
+                      </button>
+                      <!-- 冻结/解冻 -->
+                      <button
+                        @click="toggleFreeze(c)"
+                        :class="[
+                          'text-xs px-2 py-1 rounded-lg border',
+                          c.status === 'FROZEN'
+                            ? 'text-emerald-400 bg-emerald-950/40 border-emerald-900/50'
+                            : 'text-purple-400 bg-purple-950/40 border-purple-900/50'
+                        ]"
+                      >
+                        {{ c.status === 'FROZEN' ? '解冻' : '冻结' }}
+                      </button>
+                      <!-- 删除 -->
+                      <button
+                        @click="deleteCard(c)"
+                        class="text-xs text-red-400 hover:text-red-300 bg-red-950/40 border border-red-900/50 px-2 py-1 rounded-lg"
+                      >
+                        删除
+                      </button>
+                    </td>
+                  </tr>
+                  <tr v-if="filteredCards.length === 0">
+                    <td colspan="8" class="text-center py-10 text-gray-500">
+                      未找到符合条件的卡密
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- Tab 3: 设备监控 (Devices) -->
+        <section v-if="currentTab === 'devices'" class="space-y-6">
+          <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6">
+            <h3 class="text-lg font-bold text-white mb-2">活跃绑定设备监控</h3>
+            <p class="text-sm text-gray-400 mb-6">实时监控所有客户端上报的硬件型号、iOS系统版本、Keychain设备指纹与心跳状态。</p>
+
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-sm">
+                <thead class="text-xs uppercase bg-gray-950 text-gray-400 border-b border-gray-800">
+                  <tr>
+                    <th class="px-4 py-3">关联卡密</th>
+                    <th class="px-4 py-3">设备型号</th>
+                    <th class="px-4 py-3">iOS 系统</th>
+                    <th class="px-4 py-3">状态</th>
+                    <th class="px-4 py-3">最近 IP</th>
+                    <th class="px-4 py-3">最后心跳时间</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-800">
+                  <tr v-for="dev in allActiveDevices" :key="dev.id" class="hover:bg-gray-800/40">
+                    <td class="px-4 py-3 font-mono font-semibold text-emerald-400">{{ dev.card_key }}</td>
+                    <td class="px-4 py-3">{{ dev.device_model || 'iPhone' }}</td>
+                    <td class="px-4 py-3 text-gray-300">iOS {{ dev.system_version || '16.0' }}</td>
+                    <td class="px-4 py-3">
+                      <span v-if="isDeviceOnline(dev.last_seen_at)" class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs bg-emerald-950 text-emerald-400 border border-emerald-800">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> 在线活跃
+                      </span>
+                      <span v-else class="text-xs text-gray-500">
+                        离线
+                      </span>
+                    </td>
+                    <td class="px-4 py-3 font-mono text-xs text-gray-400">{{ dev.last_ip || '-' }}</td>
+                    <td class="px-4 py-3 text-xs text-gray-400">{{ formatTimestamp(dev.last_seen_at) }}</td>
+                  </tr>
+                  <tr v-if="allActiveDevices.length === 0">
+                    <td colspan="6" class="text-center py-10 text-gray-500">暂无设备绑定记录</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- Tab 4: 业务配置中心 (Settings) -->
+        <section v-if="currentTab === 'settings'" class="space-y-6">
+          <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6 max-w-3xl">
+            <h3 class="text-lg font-bold text-white mb-2">系统全局业务参数设置</h3>
+            <p class="text-sm text-gray-400 mb-6">修改后将直接热生效并写入 server/config.json 配置文件中。</p>
+
+            <form @submit.prevent="saveSettings" class="space-y-5">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-xs font-semibold uppercase text-gray-400 mb-1">心跳上报间隔 (秒)</label>
+                  <input
+                    type="number"
+                    v-model.number="settingForm.heartbeat_interval_sec"
+                    class="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-2.5 text-white"
+                    required
+                  />
+                  <span class="text-xs text-gray-500">建议 30 ~ 60 秒</span>
+                </div>
+
+                <div>
+                  <label class="block text-xs font-semibold uppercase text-gray-400 mb-1">换绑惩罚扣除时长 (小时)</label>
+                  <input
+                    type="number"
+                    v-model.number="settingForm.unbind_deduct_hours"
+                    class="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-2.5 text-white"
+                    required
+                  />
+                  <span class="text-xs text-gray-500">用户每次申请解绑时扣除的有效时长</span>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-xs font-semibold uppercase text-gray-400 mb-1">默认单卡最大换绑次数</label>
+                  <input
+                    type="number"
+                    v-model.number="settingForm.default_max_unbind_limit"
+                    class="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-2.5 text-white"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label class="block text-xs font-semibold uppercase text-gray-400 mb-1">时钟防重放容差 (毫秒)</label>
+                  <input
+                    type="number"
+                    v-model.number="settingForm.allowed_clock_skew_ms"
+                    class="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-2.5 text-white"
+                    required
+                  />
+                </div>
+              </div>
+
+              <!-- 公告设置 -->
+              <div class="border-t border-gray-800 pt-5 space-y-4">
+                <h4 class="text-sm font-bold text-emerald-400">远程下发公告设置</h4>
+                <div>
+                  <label class="block text-xs text-gray-400 mb-1">公告标题</label>
+                  <input
+                    type="text"
+                    v-model="settingForm.announcement_title"
+                    class="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-2.5 text-white"
+                  />
+                </div>
+                <div>
+                  <label class="block text-xs text-gray-400 mb-1">公告正文内容</label>
+                  <textarea
+                    v-model="settingForm.announcement_content"
+                    rows="3"
+                    class="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-2.5 text-white"
+                  ></textarea>
+                </div>
+                <div class="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="forceAlert"
+                    v-model="settingForm.announcement_force_alert"
+                    class="rounded bg-gray-950 border-gray-800 text-emerald-600 focus:ring-0"
+                  />
+                  <label for="forceAlert" class="text-sm text-gray-300">强制弹窗提醒客户端 (用户必须点击确定)</label>
+                </div>
+              </div>
+
+              <div class="pt-4">
+                <button
+                  type="submit"
+                  class="bg-emerald-600 hover:bg-emerald-500 text-white font-medium px-6 py-2.5 rounded-xl transition text-sm shadow-lg shadow-emerald-900/30"
+                >
+                  保存配置并立即生效
+                </button>
+              </div>
+            </form>
+          </div>
+        </section>
+
+        <!-- Tab 5: 审计日志 (Audit Logs) -->
+        <section v-if="currentTab === 'logs'" class="space-y-6">
+          <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6">
+            <h3 class="text-lg font-bold text-white mb-2">安全与操作审计日志</h3>
+            <p class="text-sm text-gray-400 mb-4">记录握手、卡密激活、登录验证、动态心跳、解绑换绑及潜在逆向安全告警。</p>
+
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-sm">
+                <thead class="text-xs uppercase bg-gray-950 text-gray-400 border-b border-gray-800">
+                  <tr>
+                    <th class="px-4 py-3">时间</th>
+                    <th class="px-4 py-3">动作类型</th>
+                    <th class="px-4 py-3">关联卡密</th>
+                    <th class="px-4 py-3">来源 IP</th>
+                    <th class="px-4 py-3">详细摘要</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-800 text-xs">
+                  <tr v-for="log in logs" :key="log.id" class="hover:bg-gray-800/40">
+                    <td class="px-4 py-3 text-gray-400 whitespace-nowrap">{{ new Date(log.created_at).toLocaleString() }}</td>
+                    <td class="px-4 py-3">
+                      <span :class="getLogBadgeClass(log.action_type)" class="px-2 py-0.5 rounded font-mono font-medium">
+                        {{ log.action_type }}
+                      </span>
+                    </td>
+                    <td class="px-4 py-3 font-mono text-emerald-400">{{ log.card_key || '-' }}</td>
+                    <td class="px-4 py-3 font-mono text-gray-400">{{ log.client_ip || '-' }}</td>
+                    <td class="px-4 py-3 text-gray-300">{{ log.payload_summary }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <!-- 弹窗：生成 / 创建卡密 -->
+    <div v-if="showGenModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+      <div class="bg-gray-900 border border-gray-800 rounded-2xl w-full max-w-lg p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between mb-4 border-b border-gray-800 pb-3">
+          <h3 class="text-lg font-bold text-white">生成 / 创建授权卡密</h3>
+          <button @click="showGenModal = false" class="text-gray-400 hover:text-white">&times;</button>
+        </div>
+
+        <!-- 模式切换 -->
+        <div class="flex bg-gray-950 p-1 rounded-xl mb-4 border border-gray-800">
+          <button
+            @click="genMode = 'custom'"
+            :class="['flex-1 py-1.5 text-xs font-semibold rounded-lg transition', genMode === 'custom' ? 'bg-emerald-600 text-white' : 'text-gray-400']"
+          >
+            指定自定义卡密
+          </button>
+          <button
+            @click="genMode = 'batch'"
+            :class="['flex-1 py-1.5 text-xs font-semibold rounded-lg transition', genMode === 'batch' ? 'bg-emerald-600 text-white' : 'text-gray-400']"
+          >
+            批量随机生成
+          </button>
+        </div>
+
+        <form @submit.prevent="submitGenCards" class="space-y-4">
+          <!-- 自定义卡密模式 -->
+          <div v-if="genMode === 'custom'">
+            <label class="block text-xs text-gray-400 mb-1">自定义卡密字符串 (必填)</label>
+            <input
+              type="text"
+              v-model="genForm.custom_card_key"
+              placeholder="例如: VIP-2026-8888 或 TEST-KEY-001"
+              class="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-2.5 text-white font-mono text-sm"
+              required
+            />
+          </div>
+
+          <!-- 批量模式 -->
+          <div v-else class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs text-gray-400 mb-1">生成数量</label>
+              <input
+                type="number"
+                v-model.number="genForm.count"
+                min="1"
+                max="100"
+                class="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-2.5 text-white text-sm"
+                required
+              />
+            </div>
+            <div>
+              <label class="block text-xs text-gray-400 mb-1">卡密前缀</label>
+              <input
+                type="text"
+                v-model="genForm.prefix"
+                class="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-2.5 text-white text-sm"
+                required
+              />
+            </div>
+          </div>
+
+          <!-- 套餐类型 -->
+          <div>
+            <label class="block text-xs text-gray-400 mb-1">授权套餐类别</label>
+            <select
+              v-model="genForm.card_type"
+              class="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-2.5 text-white text-sm"
+            >
+              <option value="TRIAL_1H">1小时体验卡 (TRIAL_1H)</option>
+              <option value="DAILY">天卡 (DAILY - 24小时)</option>
+              <option value="WEEKLY">周卡 (WEEKLY - 7天)</option>
+              <option value="MONTHLY">月卡 (MONTHLY - 30天)</option>
+              <option value="QUARTERLY">季卡 (QUARTERLY - 90天)</option>
+              <option value="ANNUAL">年卡 (ANNUAL - 365天)</option>
+              <option value="LIFETIME">永久授权卡 (LIFETIME)</option>
+            </select>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs text-gray-400 mb-1">允许最大设备数</label>
+              <input
+                type="number"
+                v-model.number="genForm.max_devices"
+                min="1"
+                class="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-2.5 text-white text-sm"
+              />
+            </div>
+            <div>
+              <label class="block text-xs text-gray-400 mb-1">允许换绑次数</label>
+              <input
+                type="number"
+                v-model.number="genForm.max_unbind_limit"
+                min="0"
+                class="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-2.5 text-white text-sm"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs text-gray-400 mb-1">备注说明 (可选)</label>
+            <input
+              type="text"
+              v-model="genForm.note"
+              placeholder="例如: 客户微信A测试"
+              class="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-2.5 text-white text-sm"
+            />
+          </div>
+
+          <!-- 生成结果展示 -->
+          <div v-if="generatedResultList.length > 0" class="bg-gray-950 border border-gray-800 rounded-xl p-3">
+            <div class="flex items-center justify-between text-xs text-emerald-400 font-bold mb-2">
+              <span>生成成功 (共 {{ generatedResultList.length }} 张):</span>
+              <button type="button" @click="copyGeneratedAll" class="underline hover:text-emerald-300">复制全部</button>
+            </div>
+            <div class="max-h-32 overflow-y-auto space-y-1 text-xs font-mono text-gray-300">
+              <div v-for="k in generatedResultList" :key="k" class="select-all">{{ k }}</div>
+            </div>
+          </div>
+
+          <div class="pt-2 flex justify-end gap-3">
+            <button
+              type="button"
+              @click="showGenModal = false"
+              class="px-4 py-2 text-sm text-gray-400 hover:text-white"
+            >
+              关闭
+            </button>
+            <button
+              type="submit"
+              class="bg-emerald-600 hover:bg-emerald-500 text-white font-medium px-5 py-2 rounded-xl text-sm transition shadow-lg shadow-emerald-900/30"
+            >
+              确认生成
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- 弹窗：查看设备绑定详情 -->
+    <div v-if="showBindingsModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+      <div class="bg-gray-900 border border-gray-800 rounded-2xl w-full max-w-lg p-6 shadow-2xl">
+        <div class="flex items-center justify-between mb-4 border-b border-gray-800 pb-3">
+          <div>
+            <h3 class="text-base font-bold text-white">已绑定设备列表</h3>
+            <p class="text-xs text-emerald-400 font-mono">{{ currentViewingCard?.card_key }}</p>
+          </div>
+          <button @click="showBindingsModal = false" class="text-gray-400 hover:text-white">&times;</button>
+        </div>
+
+        <div v-if="currentViewingCard?.active_bindings && currentViewingCard.active_bindings.length > 0" class="space-y-3 max-h-80 overflow-y-auto">
+          <div v-for="(b, idx) in currentViewingCard.active_bindings" :key="idx" class="bg-gray-950 border border-gray-800 rounded-xl p-3 text-xs space-y-1">
+            <div class="flex justify-between items-center">
+              <span class="font-bold text-white">{{ b.device_model || 'iPhone' }} (iOS {{ b.system_version || '-' }})</span>
+              <span class="text-gray-400">{{ formatTimestamp(b.last_seen_at) }}</span>
+            </div>
+            <div class="text-gray-500 font-mono truncate">UUID: {{ b.keychain_uuid || '-' }}</div>
+            <div class="text-gray-500">最后 IP: {{ b.last_ip || '-' }}</div>
+          </div>
+        </div>
+        <div v-else class="text-center py-8 text-gray-500 text-sm">
+          暂无绑定设备（尚未在客户端上机使用）
+        </div>
+
+        <div class="mt-4 pt-3 border-t border-gray-800 flex justify-end">
+          <button @click="showBindingsModal = false" class="px-4 py-1.5 text-xs bg-gray-800 hover:bg-gray-700 text-white rounded-lg">
+            知道了
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const { createApp, ref, computed, onMounted } = Vue;
+
+    createApp({
+      setup() {
+        const adminKey = ref(localStorage.getItem('ios_auth_admin_key') || '');
+        const isAuthenticated = ref(false);
+        const loginKey = ref('');
+        const loginError = ref('');
+
+        const currentTab = ref('overview');
+        const tabs = [
+          { id: 'overview', name: '数据看板', icon: '📊' },
+          { id: 'cards', name: '卡密管理', icon: '🔑' },
+          { id: 'devices', name: '设备监控', icon: '📱' },
+          { id: 'settings', name: '业务配置', icon: '⚙️' },
+          { id: 'logs', name: '审计日志', icon: '📜' },
+        ];
+
+        const stats = ref({});
+        const cards = ref([]);
+        const logs = ref([]);
+        const configData = ref({});
+
+        const searchQuery = ref('');
+        const filterStatus = ref('ALL');
+
+        // 生成卡密弹窗
+        const showGenModal = ref(false);
+        const genMode = ref('custom');
+        const genForm = ref({
+          custom_card_key: '',
+          count: 5,
+          prefix: 'VIP',
+          card_type: 'MONTHLY',
+          max_devices: 1,
+          max_unbind_limit: 3,
+          note: ''
+        });
+        const generatedResultList = ref([]);
+
+        // 查看绑定弹窗
+        const showBindingsModal = ref(false);
+        const currentViewingCard = ref(null);
+
+        // 系统设置表单
+        const settingForm = ref({
+          heartbeat_interval_sec: 60,
+          unbind_deduct_hours: 2,
+          default_max_unbind_limit: 3,
+          allowed_clock_skew_ms: 30000,
+          announcement_title: '',
+          announcement_content: '',
+          announcement_force_alert: false
+        });
+
+        // 通用 API 请求封装
+        async function api(path, options = {}) {
+          const headers = {
+            'Content-Type': 'application/json',
+            'X-Admin-Key': adminKey.value,
+            ...(options.headers || {})
+          };
+          const res = await fetch(path, { ...options, headers });
+          if (res.status === 403) {
+            isAuthenticated.value = false;
+            throw new Error('鉴权未通过');
+          }
+          return res.json();
+        }
+
+        async function verifyLogin(keyToTest) {
+          try {
+            const res = await fetch('/api/v1/admin/stats', {
+              headers: { 'X-Admin-Key': keyToTest }
+            });
+            if (res.status === 200) {
+              adminKey.value = keyToTest;
+              localStorage.setItem('ios_auth_admin_key', keyToTest);
+              isAuthenticated.value = true;
+              fetchAll();
+              return true;
+            }
+          } catch (e) {}
+          return false;
+        }
+
+        async function login() {
+          loginError.value = '';
+          const ok = await verifyLogin(loginKey.value);
+          if (!ok) {
+            loginError.value = 'Key 校验不正确，请核对 server/config.json 中的 admin_api_key';
+          }
+        }
+
+        function logout() {
+          localStorage.removeItem('ios_auth_admin_key');
+          adminKey.value = '';
+          isAuthenticated.value = false;
+        }
+
+        // 数据拉取
+        async function fetchAll() {
+          try {
+            const [st, cd, lg, cfg] = await Promise.all([
+              api('/api/v1/admin/stats'),
+              api('/api/v1/admin/cards/list'),
+              api('/api/v1/admin/logs?limit=50'),
+              api('/api/v1/admin/config')
+            ]);
+            if (st.code === 0) stats.value = st.data;
+            if (cd.code === 0) cards.value = cd.data;
+            if (lg.code === 0) logs.value = lg.data;
+            if (cfg.code === 0) {
+              configData.value = cfg.data;
+              settingForm.value = {
+                heartbeat_interval_sec: cfg.data.security?.heartbeat_interval_sec || 60,
+                unbind_deduct_hours: cfg.data.business?.unbind_deduct_hours ?? 2,
+                default_max_unbind_limit: cfg.data.business?.default_max_unbind_limit ?? 3,
+                allowed_clock_skew_ms: cfg.data.security?.allowed_clock_skew_ms || 30000,
+                announcement_title: cfg.data.business?.announcement?.title || '',
+                announcement_content: cfg.data.business?.announcement?.content || '',
+                announcement_force_alert: !!cfg.data.business?.announcement?.force_alert
+              };
+            }
+          } catch (e) {
+            console.error('拉取数据失败:', e);
+          }
+        }
+
+        function refreshCurrent() {
+          fetchAll();
+        }
+
+        // 筛选卡密列表
+        const filteredCards = computed(() => {
+          return cards.value.filter(c => {
+            const matchQ = !searchQuery.value ||
+              c.card_key.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
+              (c.note && c.note.toLowerCase().includes(searchQuery.value.toLowerCase()));
+
+            const matchS = filterStatus.value === 'ALL' || c.status === filterStatus.value;
+            return matchQ && matchS;
+          });
+        });
+
+        // 全部有效绑定设备扁平列表
+        const allActiveDevices = computed(() => {
+          const list = [];
+          cards.value.forEach(c => {
+            if (c.active_bindings) {
+              c.active_bindings.forEach(b => list.push(b));
+            }
+          });
+          return list.sort((a, b) => b.last_seen_at - a.last_seen_at);
+        });
+
+        function isDeviceOnline(lastSeenSec) {
+          const nowSec = Math.floor(Date.now() / 1000);
+          return (nowSec - lastSeenSec) <= 180;
+        }
+
+        // 打开生成弹窗
+        function openGenModal() {
+          generatedResultList.value = [];
+          genForm.value = {
+            custom_card_key: '',
+            count: 5,
+            prefix: 'VIP',
+            card_type: 'MONTHLY',
+            max_devices: 1,
+            max_unbind_limit: 3,
+            note: ''
+          };
+          showGenModal.value = true;
+        }
+
+        // 提交生成卡密
+        async function submitGenCards() {
+          try {
+            const payload = {
+              card_type: genForm.value.card_type,
+              max_devices: genForm.value.max_devices,
+              max_unbind_limit: genForm.value.max_unbind_limit,
+              note: genForm.value.note
+            };
+            if (genMode.value === 'custom') {
+              payload.custom_card_key = genForm.value.custom_card_key;
+            } else {
+              payload.count = genForm.value.count;
+              payload.prefix = genForm.value.prefix;
+            }
+
+            const res = await api('/api/v1/admin/cards/generate', {
+              method: 'POST',
+              body: JSON.stringify(payload)
+            });
+
+            if (res.code === 0) {
+              generatedResultList.value = res.data.map(c => c.card_key);
+              fetchAll();
+            } else {
+              alert(res.msg || '生成失败');
+            }
+          } catch (e) {
+            alert(e.message || '网络请求错误');
+          }
+        }
+
+        function copyGeneratedAll() {
+          copyText(generatedResultList.value.join('\n'));
+        }
+
+        // 冻结/解冻
+        async function toggleFreeze(card) {
+          const newStatus = card.status === 'FROZEN' ? 'ACTIVE' : 'FROZEN';
+          const res = await api('/api/v1/admin/cards/status', {
+            method: 'POST',
+            body: JSON.stringify({ card_key: card.card_key, status: newStatus })
+          });
+          if (res.code === 0) fetchAll();
+        }
+
+        // 强制清空/解绑
+        async function resetCard(card) {
+          if (!confirm(`确定要清空卡密 ${card.card_key} 的所有绑定设备吗？`)) return;
+          const res = await api('/api/v1/admin/cards/reset-bindings', {
+            method: 'POST',
+            body: JSON.stringify({ card_key: card.card_key })
+          });
+          if (res.code === 0) {
+            alert(res.msg);
+            fetchAll();
+          }
+        }
+
+        // 删除卡密
+        async function deleteCard(card) {
+          if (!confirm(`确定要彻底删除卡密 ${card.card_key} 吗？此操作不可逆！`)) return;
+          const res = await api('/api/v1/admin/cards/delete', {
+            method: 'POST',
+            body: JSON.stringify({ card_key: card.card_key })
+          });
+          if (res.code === 0) fetchAll();
+        }
+
+        // 查看绑定详情
+        function viewBindings(card) {
+          currentViewingCard.value = card;
+          showBindingsModal.value = true;
+        }
+
+        // 保存配置
+        async function saveSettings() {
+          const payload = {
+            security: {
+              heartbeat_interval_sec: settingForm.value.heartbeat_interval_sec,
+              allowed_clock_skew_ms: settingForm.value.allowed_clock_skew_ms
+            },
+            business: {
+              unbind_deduct_hours: settingForm.value.unbind_deduct_hours,
+              default_max_unbind_limit: settingForm.value.default_max_unbind_limit,
+              announcement: {
+                id: Date.now(),
+                title: settingForm.value.announcement_title,
+                content: settingForm.value.announcement_content,
+                force_alert: settingForm.value.announcement_force_alert
+              }
+            }
+          };
+
+          const res = await api('/api/v1/admin/config/update', {
+            method: 'POST',
+            body: JSON.stringify(payload)
+          });
+          if (res.code === 0) {
+            alert('业务参数更新成功并已保存！');
+            fetchAll();
+          }
+        }
+
+        // 工具格式化
+        function getStatusText(status) {
+          switch(status) {
+            case 'ACTIVE': return '正常活跃';
+            case 'UNACTIVATED': return '未激活';
+            case 'EXPIRED': return '已过期';
+            case 'FROZEN': return '已冻结';
+            default: return status;
+          }
+        }
+
+        function getStatusBadgeClass(status) {
+          switch(status) {
+            case 'ACTIVE': return 'bg-emerald-950 text-emerald-400 border border-emerald-800';
+            case 'UNACTIVATED': return 'bg-yellow-950 text-yellow-400 border border-yellow-800';
+            case 'EXPIRED': return 'bg-gray-800 text-gray-400 border border-gray-700';
+            case 'FROZEN': return 'bg-purple-950 text-purple-400 border border-purple-800';
+            default: return 'bg-gray-800 text-gray-300';
+          }
+        }
+
+        function getLogBadgeClass(type) {
+          if (type === 'ACTIVATE') return 'bg-emerald-950 text-emerald-400';
+          if (type === 'HEARTBEAT') return 'bg-cyan-950 text-cyan-400';
+          if (type === 'UNBIND') return 'bg-yellow-950 text-yellow-400';
+          if (type === 'TAMPER') return 'bg-red-950 text-red-400 border border-red-800';
+          return 'bg-gray-800 text-gray-300';
+        }
+
+        function formatExpire(card) {
+          if (card.expire_at === 0) {
+            return card.status === 'ACTIVE' ? '永久授权' : '激活后起算';
+          }
+          return new Date(card.expire_at * 1000).toLocaleString();
+        }
+
+        function formatTimestamp(sec) {
+          if (!sec) return '-';
+          return new Date(sec * 1000).toLocaleString();
+        }
+
+        function copyText(text) {
+          navigator.clipboard.writeText(text).then(() => {
+            alert(`已复制到剪贴板:\n${text}`);
+          }).catch(() => {
+            prompt('请手动复制:', text);
+          });
+        }
+
+        onMounted(() => {
+          if (adminKey.value) {
+            verifyLogin(adminKey.value);
+          }
+        });
+
+        return {
+          adminKey,
+          isAuthenticated,
+          loginKey,
+          loginError,
+          login,
+          logout,
+          currentTab,
+          tabs,
+          stats,
+          cards,
+          logs,
+          configData,
+          filteredCards,
+          allActiveDevices,
+          searchQuery,
+          filterStatus,
+          showGenModal,
+          genMode,
+          genForm,
+          generatedResultList,
+          openGenModal,
+          submitGenCards,
+          copyGeneratedAll,
+          toggleFreeze,
+          resetCard,
+          deleteCard,
+          viewBindings,
+          showBindingsModal,
+          currentViewingCard,
+          settingForm,
+          saveSettings,
+          refreshCurrent,
+          getStatusText,
+          getStatusBadgeClass,
+          getLogBadgeClass,
+          formatExpire,
+          formatTimestamp,
+          isDeviceOnline,
+          copyText
+        };
+      }
+    }).mount('#app');
+  </script>
+</body>
+</html>

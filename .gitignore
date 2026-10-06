@@ -5,6 +5,7 @@ server/node_modules/
 # Build artifacts & packages
 *.zip
 *.ipa
+*.exe
 client/build/
 output/
 temp_*/

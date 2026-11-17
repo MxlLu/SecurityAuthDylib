@@ -93,7 +93,7 @@ def patch_ipa(ipa_path, dylib_path, output_ipa=None, weak=False):
         print(f"[+] 动态库已复制到: {dest_dylib}")
 
         # 4. 执行 Mach-O 注入
-        load_path = f"@rpath/Frameworks/{dylib_name}"
+        load_path = f"@executable_path/Frameworks/{dylib_name}"
         print(f"[+] 正在向主二进制注入加载命令: {load_path}")
         injector = MachOInjector(exec_path)
         success = injector.inject(load_path, weak=weak)

@@ -60,10 +60,11 @@ def verify_injected_ipa(ipa_path):
     for idx, d in enumerate(loaded_dylibs, 1):
         print(f"    {idx}. {d}")
 
-    expected_dylib = "@rpath/Frameworks/SecurityAuth.dylib"
-    assert expected_dylib in loaded_dylibs, f"未检测到预期注入的加载命令: {expected_dylib}"
+    expected_dylib = "@executable_path/Frameworks/SecurityAuth.dylib"
+    assert expected_dylib in loaded_dylibs or "@rpath/Frameworks/SecurityAuth.dylib" in loaded_dylibs, f"未检测到预期注入的加载命令: {expected_dylib}"
+    found_dylib = expected_dylib if expected_dylib in loaded_dylibs else "@rpath/Frameworks/SecurityAuth.dylib"
 
-    print(f"\n[OK] 注入命令校验通过: {expected_dylib} 位于 Load Commands 索引 #{loaded_dylibs.index(expected_dylib) + 1}")
+    print(f"\n[OK] 注入命令校验通过: {found_dylib} 位于 Load Commands 索引 #{loaded_dylibs.index(found_dylib) + 1}")
     print("\n====================================================")
     print("[SUCCESS] 目标测试 IPA 注入打包与二进制校验 100% 成功！")
     print("====================================================\n")

@@ -18,10 +18,7 @@ __attribute__((constructor)) static void SecurityAuthEntry(void) {
     cfg.defaultPresetCardKey = @"";                   // 可预设默认卡密 (测试阶段填入如 @"VIP-CUSTOM-8888")
     cfg.heartbeatInterval = 60.0;                     // 心跳保活周期 (秒)
 
-    // 2. 初始化安全防护
-    if (cfg.enableAntiDebug) {
-        [AuthSecurity enableAntiDebug];
-    }
+    // 2. 安全防护将在应用完成启动后由 AuthManager 延迟启用，避免 dyld 初始化阶段调用 dlopen/ptrace 引发异常
 
     // 3. 预置服务端 RSA 公钥 (与服务端的 keys/server_public.pem 对应)
     NSString *embeddedServerPubKey =

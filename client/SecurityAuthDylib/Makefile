@@ -21,7 +21,7 @@ CFLAGS      = $(ARCH) $(MIN_IOS_VER) -isysroot $(SYSROOT) \
 
 LDFLAGS     = $(ARCH) $(MIN_IOS_VER) -isysroot $(SYSROOT) \
               -dynamiclib \
-              -install_name @rpath/Frameworks/$(TARGET_NAME) \
+              -install_name @executable_path/Frameworks/$(TARGET_NAME) \
               -framework Foundation \
               -framework UIKit \
               -framework Security \

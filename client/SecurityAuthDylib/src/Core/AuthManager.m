@@ -36,7 +36,9 @@
 
 - (void)startAuthFlow {
     // 1. 安全与反调试感知
-    [AuthSecurity enableAntiDebug];
+    if ([AuthConfig sharedInstance].enableAntiDebug) {
+        [AuthSecurity enableAntiDebug];
+    }
     if ([AuthSecurity isBeingDebugged]) {
         NSLog(@"[SecurityAuth] 警告: 检测到进程被调试器附加！");
     }

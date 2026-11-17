@@ -22,9 +22,11 @@ FAT_MAGIC   = 0xCAFEBABE     # FAT 胖二进制 (大端)
 FAT_CIGAM   = 0xBEBAFECA
 FAT_MAGIC_64= 0xCAFEBABB
 
-LC_SEGMENT_64 = 0x19
-LC_LOAD_DYLIB = 0x0C
-LC_LOAD_WEAK_DYLIB = 0x8000000C
+LC_SEGMENT          = 0x01
+LC_SEGMENT_64       = 0x19
+LC_LOAD_DYLIB       = 0x0C
+LC_CODE_SIGNATURE   = 0x1D
+LC_LOAD_WEAK_DYLIB  = 0x8000000C
 
 def align8(val):
     return (val + 7) & ~7
@@ -104,9 +106,16 @@ class MachOInjector:
         # 遍历现有 Load Commands，检查是否已存在同名 dylib，并寻找可用空间边界
         cmd_offset = slice_offset + header_size
         min_section_offset = slice_size
+        last_cmd = None
+        last_cmd_offset = cmd_offset
+        last_cmdsize = 0
 
         for _ in range(ncmds):
             cmd, cmdsize = struct.unpack(f'{endian}2I', self.data[cmd_offset:cmd_offset + 8])
+            last_cmd = cmd
+            last_cmd_offset = cmd_offset
+            last_cmdsize = cmdsize
+
             if cmd in (LC_LOAD_DYLIB, LC_LOAD_WEAK_DYLIB):
                 # 检查 dylib 名称
                 name_offset = struct.unpack(f'{endian}I', self.data[cmd_offset + 8:cmd_offset + 12])[0]
@@ -117,11 +126,19 @@ class MachOInjector:
                     return False
 
             if cmd == LC_SEGMENT_64:
-                # 寻找第一个 section 的起始文件偏移以确定 padding 上限
+                # section_64: 80 bytes each, uint32_t offset is at +48
                 nsects = struct.unpack(f'{endian}I', self.data[cmd_offset + 64:cmd_offset + 68])[0]
                 sect_start = cmd_offset + 72
                 for s in range(nsects):
-                    sect_offset = struct.unpack(f'{endian}I', self.data[sect_start + s * 80 + 32:sect_start + s * 80 + 36])[0]
+                    sect_offset = struct.unpack(f'{endian}I', self.data[sect_start + s * 80 + 48:sect_start + s * 80 + 52])[0]
+                    if 0 < sect_offset < min_section_offset:
+                        min_section_offset = sect_offset
+            elif cmd == LC_SEGMENT:
+                # section (32-bit): 68 bytes each, uint32_t offset is at +40
+                nsects = struct.unpack(f'{endian}I', self.data[cmd_offset + 48:cmd_offset + 52])[0]
+                sect_start = cmd_offset + 56
+                for s in range(nsects):
+                    sect_offset = struct.unpack(f'{endian}I', self.data[sect_start + s * 68 + 40:sect_start + s * 68 + 44])[0]
                     if 0 < sect_offset < min_section_offset:
                         min_section_offset = sect_offset
 
@@ -151,6 +168,11 @@ class MachOInjector:
             print(f"    [!] 空间不足: 剩余 padding 仅 {space_available} 字节，所需 {new_cmdsize} 字节")
             return False
 
+        insert_pos = slice_offset + header_size + sizeofcmds
+        if not all(b == 0 for b in self.data[insert_pos:insert_pos + new_cmdsize]):
+            print("    [!] 警告: Header 尾部并非全 0 填充区，中止注入以防破坏代码段")
+            return False
+
         # 构造二进制命令数据
         dylib_cmd_bytes = struct.pack(
             f'{endian}6I',
@@ -162,9 +184,14 @@ class MachOInjector:
             0x00010000    # compatibility_version (1.0.0)
         ) + padded_path
 
-        # 写入新命令到原有命令末尾
-        insert_pos = slice_offset + header_size + sizeofcmds
-        self.data[insert_pos:insert_pos + new_cmdsize] = dylib_cmd_bytes
+        # 若最后一条命令为 LC_CODE_SIGNATURE，将其后移以保持签名命令处于末尾
+        if last_cmd == LC_CODE_SIGNATURE and last_cmdsize > 0:
+            sig_cmd_bytes = bytes(self.data[last_cmd_offset:last_cmd_offset + last_cmdsize])
+            self.data[last_cmd_offset:last_cmd_offset + new_cmdsize] = dylib_cmd_bytes
+            self.data[last_cmd_offset + new_cmdsize:last_cmd_offset + new_cmdsize + last_cmdsize] = sig_cmd_bytes
+        else:
+            # 写入新命令到原有命令末尾
+            self.data[insert_pos:insert_pos + new_cmdsize] = dylib_cmd_bytes
 
         # 更新 Header 中的 ncmds 和 sizeofcmds
         new_ncmds = ncmds + 1
